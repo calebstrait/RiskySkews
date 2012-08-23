@@ -1,0 +1,2 @@
+# Experiment to test reward distribution preference
+In this task, the subject must select between two options that are drawn from a pool of three possible options. Options A and B each have a reward amount that is randomly chosen from two distributions associated with each and are skewed in opposite directions. Option C, or the "safe" option, always results in the same reward amount, which is a moderate size.
