@@ -26,8 +26,10 @@ function risky_skews(monkeysInitial)
     
     % Colors.
     colorBackground = [0 0 0];
+    colorCyan       = [0 255 255];
     colorGrey       = [128 128 128];
     colorYellow     = [255 255 0];
+    colorWhite      = [255 255 255];
     
     % Coordinates.
     centerX         = 512;                  % X pixel coordinate for the screen center.
@@ -104,10 +106,14 @@ function risky_skews(monkeysInitial)
     varName         = 'data';               % Name of the variable to save in the workspace.
     
     % Stimuli.
+    feedThick       = 10;                   % Thickness of the feedback border.
     dotRadius       = 10;                   % Radius of the fixation dot.
-    fixAdj          = 1;
+    fixAdj          = 1;                    % Adjustment made to fixation dot size.
     
     % Times.
+    chooseFixTime   = 0.5;                  % Time needed to look at option to select it.
+    successDispTime = 0.2;                  % Time that successful selection feedback is given.
+    holdFixTime     = 0.100;                % Time fixation must be held with options present.
     ITI             = 2;                    % Intertrial interval.
     minFixTime      = 0.1;                  % Minimum time monkey must fixate to start trial.
     timeToFix       = intmax;               % Amount of time monkey is given to fixate.
@@ -115,8 +121,11 @@ function risky_skews(monkeysInitial)
     % Trial.
     currTrial       = 0;                    % Current trial.
     currTrialType   = '';                   % Whether the trial is AB, AC, or BC.
+    inHoldingState  = true;                 % Whether or not in holding fixation state.
+    repeatTrial     = false;                % Determines whether a trial has to be repeated.
     rewardOnLeft    = 0;                    % Reward duration given for a left choice.
     rewardOnRight   = 0;                    % Reward duration given for a right choice.
+    screenFlip      = true;                 % Whether or not the screen should be "flipped."
     stimOnLeft      = '';                   % What stimulus is presented on the left.
     stimOnRight     = '';                   % What stimulus is presented on the right.
     
@@ -131,7 +140,7 @@ function risky_skews(monkeysInitial)
     window = setup_window;
     
     % Eyelink.
-    %setup_eyelink;
+    setup_eyelink;
     
     % Load images.
     imgForest = imread('images/forest.jpg', 'jpg');
@@ -201,6 +210,8 @@ function risky_skews(monkeysInitial)
                 % Determine if eye is within the left option boundary.
                 if xCoord >= leftBoundXMin && xCoord <= leftBoundXMax && ...
                    yCoord >= leftBoundYMin && yCoord <= leftBoundYMax
+                    draw_feedback('left', colorWhite);
+                    
                     % Determine if eye maintained fixation for given duration.
                     checkFixBreak = fix_break_check(leftBoundXMin, leftBoundXMax, ...
                                                     leftBoundYMin, leftBoundYMax, ...
@@ -209,13 +220,17 @@ function risky_skews(monkeysInitial)
                     if checkFixBreak == false
                         % Fixation was obtained for desired duration.
                         fixation = true;
-                        area = 'double';
+                        area = 'left';
                         
                         return;
+                    else
+                        draw_stimuli;
                     end
                 % Determine if eye is within the right option boundary.
                 elseif xCoord >= rightBoundXMin && xCoord <= rightBoundXMax && ...
                        yCoord >= rightBoundYMin && yCoord <= rightBoundYMax
+                    draw_feedback('right', colorWhite);
+                    
                     % Determine if eye maintained fixation for given duration.
                     checkFixBreak = fix_break_check(rightBoundXMin, rightBoundXMax, ...
                                                     rightBoundYMin, rightBoundYMax, ...
@@ -224,9 +239,11 @@ function risky_skews(monkeysInitial)
                     if checkFixBreak == false
                         % Fixation was obtained for desired duration.
                         fixation = true;
-                        area = 'double';
+                        area = 'right';
                         
                         return;
+                    else
+                        draw_stimuli;
                     end
                 end
             else
@@ -237,6 +254,41 @@ function risky_skews(monkeysInitial)
         % Timeout reached.
         fixation = false;
         area = 'none';
+    end
+    
+    % Draw colored outlines around options for feedback.
+    function draw_feedback(location, color)
+        if strcmp(location, 'left')
+            if strcmp(stimOnLeft, 'A') || strcmp(stimOnLeft, 'B')
+                screenFlip = false;
+                draw_stimuli;
+                Screen('FrameRect', window, color, [leftStimXMin, leftStimYMin, ...
+                                                    leftStimXMax, leftStimYMax], feedThick);
+                Screen('Flip', window);
+            elseif strcmp(stimOnLeft, 'C')
+                screenFlip = false;
+                draw_stimuli;
+                Screen('FrameRect', window, color, [leftGreyXMin, leftGreyYMin, ...
+                                                    leftGreyXMax, leftGreyYMax], feedThick);
+                Screen('Flip', window);
+            end
+        elseif strcmp(location, 'right')
+            if strcmp(stimOnRight, 'A') || strcmp(stimOnRight, 'B')
+                screenFlip = false;
+                draw_stimuli;
+                Screen('FrameRect', window, color, [rightStimXMin, rightStimYMin, ...
+                                                    rightStimXMax, rightStimYMax], feedThick);
+                Screen('Flip', window);
+            elseif strcmp(stimOnRight, 'C')
+                screenFlip = false;
+                draw_stimuli;
+                Screen('FrameRect', window, color, [rightGreyXMin, rightGreyYMin, ...
+                                                    rightGreyXMax, rightGreyYMax], feedThick);
+                Screen('Flip', window);
+            end
+        end
+        
+        screenFlip = true;
     end
     
     % Draws a thin line on top of the invisible fixation boundaries.
@@ -255,11 +307,23 @@ function risky_skews(monkeysInitial)
                                            centerY - dotRadius; ...
                                            centerX + dotRadius - fixAdj; ...
                                            centerY + dotRadius]);
-        % Screen('Flip', window);
+        Screen('Flip', window);
     end
     
     % Draws the stimuli on the screen depending on the trial type.
     function draw_stimuli()
+        if inHoldingState
+            Screen('FillOval', window, colorYellow, [centerX - dotRadius + fixAdj; ...
+                                                     centerY - dotRadius; ...
+                                                     centerX + dotRadius - fixAdj; ...
+                                                     centerY + dotRadius]);
+        else
+            Screen('FillOval', window, colorBackground, [centerX - dotRadius + fixAdj; ...
+                                                         centerY - dotRadius; ...
+                                                         centerX + dotRadius - fixAdj; ...
+                                                         centerY + dotRadius]);
+        end
+        
         if strcmp(stimOnLeft, 'A')
             Screen('PutImage', window, imgForest, [leftStimXMin, leftStimYMin, ...
                                                    leftStimXMax, leftStimYMax]);
@@ -282,7 +346,9 @@ function risky_skews(monkeysInitial)
                                                    rightGreyXMax rightGreyYMax]);
         end
         
-        Screen('Flip', window);
+        if screenFlip
+            Screen('Flip', window);
+        end
     end
     
     % Checks if the eye breaks fixation bounds before end of duration.
@@ -508,7 +574,10 @@ function risky_skews(monkeysInitial)
     
     % Does exactly what you freakin' think it does.
     function run_single_trial()
-        currTrial = currTrial + 1;
+        if ~repeatTrial
+            currTrial = currTrial + 1;
+            generate_stimuli;
+        end
         
         draw_fixation_point(colorYellow);
         
@@ -516,11 +585,74 @@ function risky_skews(monkeysInitial)
         [fixating, ~] = check_fixation('single', minFixTime, timeToFix);
         
         if fixating
-            generate_stimuli;
             draw_stimuli;
+            
+            % Make sure fixation is held before a target is chosen.
+            fixationBreak = fix_break_check(fixBoundXMin, fixBoundXMax, ...
+                                            fixBoundYMin, fixBoundYMax, ...
+                                            holdFixTime);
+            
+            if fixationBreak
+                % Start trial over because fixation wasn't held.
+                repeatTrial = true;
+                run_single_trial;
+                return;
+            else
+                repeatTrial = false;
+                inHoldingState = false;
+                draw_stimuli;
+            end
+            
+            fixatingOnTarget = false;
+            while ~fixatingOnTarget
+                % Check for fixation on either targets.
+                [fixatingOnTarget, area] = check_fixation('double', chooseFixTime, timeToFix);
+                
+                if fixatingOnTarget
+                    if strcmp(area, 'left')
+                        % Display feedback stimuli.
+                        draw_feedback('left', colorCyan);
+                        WaitSecs(successDispTime);
+                        
+                        % Give appropriate reward.
+                        reward(rewardOnLeft);
+                        
+                        % Clear screen.
+                        Screen('FillRect', window, colorBackground, ...
+                               [0 0 (centerX * 2) (centerY * 2)]);
+                        Screen('Flip', window);
+                        
+                        % Update variables.
+                        
+                        % Calculate trial percentages.
+                        
+                        % Save trial data.
+                    elseif strcmp(area, 'right')
+                        % Display feedback stimuli.
+                        draw_feedback('right', colorCyan);
+                        WaitSecs(successDispTime);
+                        
+                        % Give appropriate reward.
+                        reward(rewardOnRight);
+                        
+                        % Clear screen.
+                        Screen('FillRect', window, colorBackground, ...
+                               [0 0 (centerX * 2) (centerY * 2)]);
+                        Screen('Flip', window);
+                        
+                        % Update variables.
+                        
+                        % Calculate trial percentages.
+                        
+                        % Save trial data.
+                    end
+                end
+            end
+        else
+            % Redo this trial since monkey failed to start it.
+            repeatTrial = true;
+            run_single_trial;
         end
-        
-        % send_and_save;
     end
 
     % Saves trial data to a .mat file.
