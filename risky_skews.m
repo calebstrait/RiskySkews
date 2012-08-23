@@ -26,28 +26,59 @@ function risky_skews(monkeysInitial)
     
     % Colors.
     colorBackground = [0 0 0];
+    colorGrey       = [128 128 128];
     colorYellow     = [255 255 0];
     
     % Coordinates.
     centerX         = 512;                  % X pixel coordinate for the screen center.
     centerY         = 384;                  % Y pixel coordinate for the screen center.
+    endsBoundAdj    = 384;                  % Coordinate adjustment.
     hfWidth         = 88;                   % Half the width of the fixation boxes.
+    imageWidth      = 300;                  % The width of the presented images.
+    imageHeight     = 400;                  % The height of the presented images.
+    sideBoundAdj    = 211;                  % Coordinate adjustment.
     
-    % Values to calculate fixation boxes.
+    % Fixation boundaries for the fixation dot.
     fixBoundXMax    = centerX + hfWidth;
     fixBoundXMin    = centerX - hfWidth;
     fixBoundYMax    = centerY + hfWidth;
     fixBoundYMin    = centerY - hfWidth;
     
-    leftBoundXMax   = centerX;
-    leftBoundXMin   = centerX;
-    leftBoundYMax   = centerY;
-    leftBoundYMin   = centerY;
+    % Fixation bondaries for the left stimulus.
+    leftBoundXMax   = 2 * centerX - 4 * hfWidth - imageWidth;
+    leftBoundXMin   = centerX - imageWidth - sideBoundAdj;
+    leftBoundYMax   = centerY + endsBoundAdj;
+    leftBoundYMin   = centerY - endsBoundAdj;
     
-    rightBoundXMax  = centerX;
-    rightBoundXMin  = centerX;
-    rightBoundYMax  = centerY;
-    rightBoundYMin  = centerY;
+    % Fixation boundaries for the right stimulus.
+    rightBoundXMax  = centerX + imageWidth + sideBoundAdj;
+    rightBoundXMin  = 4 * hfWidth + imageWidth;
+    rightBoundYMax  = centerY + endsBoundAdj;
+    rightBoundYMin  = centerY - endsBoundAdj;
+    
+    % Coordinates for drawing the left stimulus image. 
+    leftStimXMax    = centerX - 2 * hfWidth;
+    leftStimXMin    = centerX - 2 * hfWidth - imageWidth;
+    leftStimYMax    = centerY + imageHeight / 2;
+    leftStimYMin    = centerY - imageHeight / 2;
+    
+    % Coordinates for drawing the right stimulus image.
+    rightStimXMax   = centerX + 2 * hfWidth + imageWidth;
+    rightStimXMin   = centerX + 2 * hfWidth;
+    rightStimYMax   = centerY + imageHeight / 2;
+    rightStimYMin   = centerY - imageHeight / 2;
+    
+    % Coordinates for drawing the left grey bar.
+    leftGreyXMax    = centerX - 2 * hfWidth - imageWidth / 3;
+    leftGreyXMin    = centerX - 2 * hfWidth - imageWidth + imageWidth / 3;
+    leftGreyYMax    = centerY + imageHeight / 2;
+    leftGreyYMin    = centerY - imageHeight / 2;
+    
+    % Coordinates for drawing the right grey bar.
+    rightGreyXMax   = centerX + 2 * hfWidth + imageWidth - imageWidth / 3;
+    rightGreyXMin   = centerX + 2 * hfWidth + imageWidth / 3;
+    rightGreyYMax   = centerY + imageHeight / 2;
+    rightGreyYMin   = centerY - imageHeight / 2;
     
     % References.
     monkeyScreen    = 1;                    % Number of the screen the monkey sees.
@@ -83,19 +114,28 @@ function risky_skews(monkeysInitial)
     
     % Trial.
     currTrial       = 0;                    % Current trial.
+    currTrialType   = '';                   % Whether the trial is AB, AC, or BC.
+    rewardOnLeft    = 0;                    % Reward duration given for a left choice.
+    rewardOnRight   = 0;                    % Reward duration given for a right choice.
+    stimOnLeft      = '';                   % What stimulus is presented on the left.
+    stimOnRight     = '';                   % What stimulus is presented on the right.
     
     % ---------------------------------------------- %
     % ------------------- Setup -------------------- %
     % ---------------------------------------------- %
     
     % Saving.
-    prepare_for_saving;
+    %prepare_for_saving;
     
     % Window.
     window = setup_window;
     
     % Eyelink.
-    setup_eyelink;
+    %setup_eyelink;
+    
+    % Load images.
+    imgForest = imread('images/forest.jpg', 'jpg');
+    imgMounts = imread('images/mountains.jpg', 'jpg');
     
     % ---------------------------------------------- %
     % ------------ Main experiment loop ------------ %
@@ -105,7 +145,7 @@ function risky_skews(monkeysInitial)
     while running
         run_single_trial;
         
-        print_stats();
+        % print_stats();
         
         % Check for pausing or quitting during ITI.
         startingTime = GetSecs;
@@ -203,7 +243,10 @@ function risky_skews(monkeysInitial)
     function draw_fixation_bounds()
         Screen('FrameRect', window, colorYellow, [fixBoundXMin fixBoundYMin ...
                                                   fixBoundXMax fixBoundYMax], 1);
-        Screen('Flip', window);
+        Screen('FrameRect', window, colorYellow, [leftBoundXMin leftBoundYMin ...
+                                                  leftBoundXMax leftBoundYMax], 1);
+        Screen('FrameRect', window, colorYellow, [rightBoundXMin rightBoundYMin ...
+                                                  rightBoundXMax rightBoundYMax], 1);
     end
     
     % Draws the fixation point on the screen.
@@ -212,6 +255,33 @@ function risky_skews(monkeysInitial)
                                            centerY - dotRadius; ...
                                            centerX + dotRadius - fixAdj; ...
                                            centerY + dotRadius]);
+        % Screen('Flip', window);
+    end
+    
+    % Draws the stimuli on the screen depending on the trial type.
+    function draw_stimuli()
+        if strcmp(stimOnLeft, 'A')
+            Screen('PutImage', window, imgForest, [leftStimXMin, leftStimYMin, ...
+                                                   leftStimXMax, leftStimYMax]);
+        elseif strcmp(stimOnLeft, 'B')
+            Screen('PutImage', window, imgMounts, [leftStimXMin, leftStimYMin, ...
+                                                   leftStimXMax, leftStimYMax]);
+        elseif strcmp(stimOnLeft, 'C')
+            Screen('FillRect', window, colorGrey, [leftGreyXMin leftGreyYMin ...
+                                                   leftGreyXMax leftGreyYMax]);
+        end
+        
+        if strcmp(stimOnRight, 'A')
+            Screen('PutImage', window, imgForest, [rightStimXMin, rightStimYMin, ...
+                                                   rightStimXMax, rightStimYMax]);
+        elseif strcmp(stimOnRight, 'B')
+            Screen('PutImage', window, imgMounts, [rightStimXMin, rightStimYMin, ...
+                                                   rightStimXMax, rightStimYMax]);
+        elseif strcmp(stimOnRight, 'C')
+            Screen('FillRect', window, colorGrey, [rightGreyXMin rightGreyYMin ...
+                                                   rightGreyXMax rightGreyYMax]);
+        end
+        
         Screen('Flip', window);
     end
     
@@ -237,6 +307,47 @@ function risky_skews(monkeysInitial)
         
         % Eye maintained fixation for entire duration.
         fixationBreak = false;
+    end
+
+    % Creates the values for a stimulus presentation.
+    function generate_stimuli()
+        % Determine what trial type it will be.
+        possibleTrials = [{'AB'}, {'AC'}, {'BC'}];
+        randIndex = rand_int(2);
+        currTrialType = char(possibleTrials(randIndex));
+        
+        % Determine positioning.
+        randIndex = rand_int(1);
+        stimOnLeft = currTrialType(randIndex);
+        tempCurrType = currTrialType;
+        tempCurrType(randIndex) = [];
+        stimOnRight = tempCurrType(1);
+        
+        % Determine distribution lengths.
+        [~, distALen] = size(distA);
+        [~, distBLen] = size(distB);
+        
+        % Determine reward amount for the left option.
+        if strcmp(stimOnLeft, 'A')
+            randIndex = rand_int(distALen - 1);
+            rewardOnLeft = distA(randIndex);
+        elseif strcmp(stimOnLeft, 'B')
+            randIndex = rand_int(distALen - 1);
+            rewardOnLeft = distA(randIndex);
+        elseif strcmp(stimOnLeft, 'C')
+            rewardOnLeft = r110;
+        end
+        
+        % Determine the reward amount for the right option.
+        if strcmp(stimOnRight, 'A')
+            randIndex = rand_int(distBLen - 1);
+            rewardOnRight = distB(randIndex);
+        elseif strcmp(stimOnRight, 'B')
+            randIndex = rand_int(distBLen - 1);
+            rewardOnRight = distB(randIndex);
+        elseif strcmp(stimOnRight, 'C')
+            rewardOnRight = r110;
+        end
     end
     
     % Returns the current x and y coordinants of the given eye.
@@ -369,6 +480,11 @@ function risky_skews(monkeysInitial)
         disp('///////////////////////////            \\\\\\\\\\\\\\\\\\\\\\\\\\\');
         disp('             ');
     end
+
+    % Returns a random int between 1 (inclusive) and integer + 1 (inclusive).
+    function randInt = rand_int(integer)
+        randInt = round(rand(1) * integer + 1);
+    end
     
     % Rewards monkey using the juicer with the passed duration.
     function reward(rewardDuration)
@@ -392,9 +508,19 @@ function risky_skews(monkeysInitial)
     
     % Does exactly what you freakin' think it does.
     function run_single_trial()
+        currTrial = currTrial + 1;
+        
         draw_fixation_point(colorYellow);
         
-        send_and_save;
+        % Check for fixation.
+        [fixating, ~] = check_fixation('single', minFixTime, timeToFix);
+        
+        if fixating
+            generate_stimuli;
+            draw_stimuli;
+        end
+        
+        % send_and_save;
     end
 
     % Saves trial data to a .mat file.
