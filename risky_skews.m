@@ -113,9 +113,9 @@ function risky_skews(monkeysInitial)
     fixAdj          = 1;                    % Adjustment made to fixation dot size.
     
     % Times.
-    chooseFixTime   = 0.5;                  % Time needed to look at option to select it.
+    chooseFixTime   = 0.4;                  % Time needed to look at option to select it.
     successTime     = 0.2;                  % Time that successful selection feedback is given.
-    holdFixTime     = 0.100;                % Time fixation must be held with options present.
+    holdFixTime     = 0.1;                  % Time fixation must be held with options present.
     ITI             = 2;                    % Intertrial interval.
     minFixTime      = 0.1;                  % Minimum time monkey must fixate to start trial.
     timeToFix       = intmax;               % Amount of time monkey is given to fixate.
@@ -671,9 +671,9 @@ function risky_skews(monkeysInitial)
                             cCount = cCount + 1;
                         end
                         
-                        aPercentage = round(aCount / currTrial);
-                        bPercentage = round(bCount / currTrial);
-                        cPercentage = round(cCount / currTrial);
+                        aPercentage = round((aCount / currTrial) * 100);
+                        bPercentage = round((bCount / currTrial) * 100);
+                        cPercentage = round((cCount / currTrial) * 100);
                         
                         save_trial_data;
                     end
