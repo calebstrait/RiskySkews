@@ -103,6 +103,8 @@ function risky_skews(monkeysInitial)
     data            = struct([]);           % Workspace variable where trial data is saved.
     riskySkewsData  = '/Data/RiskySkews';   % Directory where .mat files are saved.
     saveCommand     = NaN;                  % Command string that will save .mat files.
+    optionChosen    = '';                   % Which option was chosen: A, B, or C.
+    rewardGiven     = 0;                    % What reward duration was given.
     varName         = 'data';               % Name of the variable to save in the workspace.
     
     % Stimuli.
@@ -112,13 +114,19 @@ function risky_skews(monkeysInitial)
     
     % Times.
     chooseFixTime   = 0.5;                  % Time needed to look at option to select it.
-    successDispTime = 0.2;                  % Time that successful selection feedback is given.
+    successTime     = 0.2;                  % Time that successful selection feedback is given.
     holdFixTime     = 0.100;                % Time fixation must be held with options present.
     ITI             = 2;                    % Intertrial interval.
     minFixTime      = 0.1;                  % Minimum time monkey must fixate to start trial.
     timeToFix       = intmax;               % Amount of time monkey is given to fixate.
     
     % Trial.
+    aCount          = 0;                    % The number of times an A option was chosen.
+    bCount          = 0;                    % The number of times a B option was chosen.
+    cCount          = 0;                    % The number of times a C option was chosen.
+    aPercentage     = 0;                    % Current percent of the time an A option was chosen.
+    bPercentage     = 0;                    % Current percent of the time a B option was chosen.
+    cPercentage     = 0;                    % Current percent of the time a C option was chosen.
     currTrial       = 0;                    % Current trial.
     currTrialType   = '';                   % Whether the trial is AB, AC, or BC.
     inHoldingState  = true;                 % Whether or not in holding fixation state.
@@ -133,18 +141,18 @@ function risky_skews(monkeysInitial)
     % ------------------- Setup -------------------- %
     % ---------------------------------------------- %
     
+    % Load images.
+    imgForest = imread('images/forest.jpg', 'jpg');
+    imgMounts = imread('images/mountains.jpg', 'jpg');
+    
     % Saving.
-    %prepare_for_saving;
+    prepare_for_saving;
     
     % Window.
     window = setup_window;
     
     % Eyelink.
     setup_eyelink;
-    
-    % Load images.
-    imgForest = imread('images/forest.jpg', 'jpg');
-    imgMounts = imread('images/mountains.jpg', 'jpg');
     
     % ---------------------------------------------- %
     % ------------ Main experiment loop ------------ %
@@ -154,7 +162,7 @@ function risky_skews(monkeysInitial)
     while running
         run_single_trial;
         
-        % print_stats();
+        print_stats();
         
         % Check for pausing or quitting during ITI.
         startingTime = GetSecs;
@@ -491,27 +499,26 @@ function risky_skews(monkeysInitial)
 
     % Prints current trial stats.
     function print_stats()
-        % MAKE SURE TO CHANGE THIS FUNCTION FOR EACH EXPERIMENT.
         % Convert percentages to strings.
-        blockPercentCorrStr  = strcat(num2str(blockPercentCorr), '%');
-        totalPercentCorrStr  = strcat(num2str(totalPercentCorr), '%');
-        currBlockTrialStr    = num2str(currBlockTrial);
-        trialCountStr        = num2str(trialCount);
+        aPercentStr   = strcat(num2str(aPercentage), '%');
+        bPercentStr   = strcat(num2str(bPercentage), '%');
+        cPercentStr   = strcat(num2str(cPercentage), '%');
+        trialCountStr = num2str(currTrial);
         
         home;
         disp('             ');
         disp('****************************************');
-        disp('             ');
-        fprintf('Block trials: % s', currBlockTrialStr);
         disp('             ');
         fprintf('Total trials: % s', trialCountStr);
         disp('             ');
         disp('             ');
         disp('----------------------------------------');
         disp('             ');
-        fprintf('Block correct: % s', blockPercentCorrStr);
+        fprintf('Chose A: % s', aPercentStr);
         disp('             ');
-        fprintf('Total correct: % s', totalPercentCorrStr);
+        fprintf('Chose B: % s', bPercentStr);
+        disp('             ');
+        fprintf('Chose C: % s', cPercentStr);
         disp('             ');
         disp('             ');
         disp('****************************************');
@@ -612,7 +619,7 @@ function risky_skews(monkeysInitial)
                     if strcmp(area, 'left')
                         % Display feedback stimuli.
                         draw_feedback('left', colorCyan);
-                        WaitSecs(successDispTime);
+                        WaitSecs(successTime);
                         
                         % Give appropriate reward.
                         reward(rewardOnLeft);
@@ -622,15 +629,27 @@ function risky_skews(monkeysInitial)
                                [0 0 (centerX * 2) (centerY * 2)]);
                         Screen('Flip', window);
                         
-                        % Update variables.
+                        % Update and calculate trial percentages.
+                        optionChosen = stimOnLeft;
+                        rewardGiven = rewardOnLeft;
                         
-                        % Calculate trial percentages.
+                        if strcmp(optionChosen, 'A')
+                            aCount = aCount + 1;
+                        elseif strcmp(optionChosen, 'B')
+                            bCount = bCount + 1;
+                        elseif strcmp(optionChosen, 'C')
+                            cCount = cCount + 1;
+                        end
                         
-                        % Save trial data.
+                        aPercentage = round((aCount / currTrial) * 100);
+                        bPercentage = round((bCount / currTrial) * 100);
+                        cPercentage = round((cCount / currTrial) * 100);
+                        
+                        save_trial_data;
                     elseif strcmp(area, 'right')
                         % Display feedback stimuli.
                         draw_feedback('right', colorCyan);
-                        WaitSecs(successDispTime);
+                        WaitSecs(successTime);
                         
                         % Give appropriate reward.
                         reward(rewardOnRight);
@@ -640,11 +659,23 @@ function risky_skews(monkeysInitial)
                                [0 0 (centerX * 2) (centerY * 2)]);
                         Screen('Flip', window);
                         
-                        % Update variables.
+                        % Update and calculate trial percentages.
+                        optionChosen = stimOnRight;
+                        rewardGiven = rewardOnRight;
                         
-                        % Calculate trial percentages.
+                        if strcmp(optionChosen, 'A')
+                            aCount = aCount + 1;
+                        elseif strcmp(optionChosen, 'B')
+                            bCount = bCount + 1;
+                        elseif strcmp(optionChosen, 'C')
+                            cCount = cCount + 1;
+                        end
                         
-                        % Save trial data.
+                        aPercentage = round(aCount / currTrial);
+                        bPercentage = round(bCount / currTrial);
+                        cPercentage = round(cCount / currTrial);
+                        
+                        save_trial_data;
                     end
                 end
             end
@@ -656,9 +687,26 @@ function risky_skews(monkeysInitial)
     end
 
     % Saves trial data to a .mat file.
-    function send_and_save()
+    function save_trial_data()
         % Save variables to a .mat file.
-        data(currTrial).trial = currTrial;  % The trial number for this trial.
+        data(currTrial).trial = currTrial;           % The trial number for this trial.
+        data(currTrial).trialType = currTrialType;   % The type of trial: AB, AC, or CB.
+        data(currTrial).aCount = aCount;             % The number of times an A option was chosen.
+        data(currTrial).bCount = bCount;             % The number of times a B option was chosen.
+        data(currTrial).cCount = cCount;             % The number of times a C option was chosen.
+        data(currTrial).aPercentage = aPercentage;   % The percent that option A has been chosen.
+        data(currTrial).bPercentage = bPercentage;   % The percent that option B has been chosen.
+        data(currTrial).cPercentage = cPercentage;   % The percent that option C has been chosen.
+        data(currTrial).leftStim = stimOnLeft;       % Option on the left side.
+        data(currTrial).rightStim = stimOnRight;     % Option on the right side.
+        data(currTrial).choice = optionChosen;       % Option that the monkey chose.
+        data(currTrial).reward = rewardGiven;        % The reward duration the monkey was given.
+        data(currTrial).chooseTime = chooseFixTime;  % Time monkey most look at the option to select it.
+        data(currTrial).successTime = successTime;   % Time monkey is shown feedback after selecting option.
+        data(currTrial).holdTime = holdFixTime;      % Time monkey most look at the option to select it.
+        data(currTrial).ITI = ITI;                   % Intertrial interval.
+        data(currTrial).minFixTime = minFixTime;     % Time monkey must fixate to start trial.
+        data(currTrial).trackedEye = trackedEye;     % The eye being tracked.
         
         eval(saveCommand);
     end
