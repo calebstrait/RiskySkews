@@ -116,17 +116,26 @@ function risky_skews(monkeysInitial)
     chooseFixTime   = 0.4;                  % Time needed to look at option to select it.
     successTime     = 0.2;                  % Time that successful selection feedback is given.
     holdFixTime     = 0.1;                  % Time fixation must be held with options present.
-    ITI             = 2;                    % Intertrial interval.
+    ITI             = 1;                    % Intertrial interval.
     minFixTime      = 0.1;                  % Minimum time monkey must fixate to start trial.
     timeToFix       = intmax;               % Amount of time monkey is given to fixate.
     
     % Trial.
-    aCount          = 0;                    % The number of times an A option was chosen.
-    bCount          = 0;                    % The number of times a B option was chosen.
-    cCount          = 0;                    % The number of times a C option was chosen.
-    aPercentage     = 0;                    % Current percent of the time an A option was chosen.
-    bPercentage     = 0;                    % Current percent of the time a B option was chosen.
-    cPercentage     = 0;                    % Current percent of the time a C option was chosen.
+    ACount          = 0;                    % The number of times an A option was chosen.
+    BCount          = 0;                    % The number of times a B option was chosen.
+    CCount          = 0;                    % The number of times a C option was chosen.
+    ABCount         = 0;                    % The number of times trial type AB was given.
+    ACCount         = 0;                    % The number of times trial type AC was given.
+    BCCount         = 0;                    % The number of times trial type BC was given.
+    AWithAB         = 0;                    % The number of times A is chosen over B in AB.
+    AWithAC         = 0;                    % The number of times A is chosen over C in AC.
+    BWithBC         = 0;                    % The number of times B is chosen over C in BC.
+    AOverABPercent  = 0;                    % Current percentage that A is chosen over B in AB.
+    AOverACPercent  = 0;                    % Current percentage that A is chosen over C in AC.
+    BOverBCPercent  = 0;                    % Current percentage that B is chosen over C in BC.
+    APercentage     = 0;                    % Current percent of the time an A option was chosen.
+    BPercentage     = 0;                    % Current percent of the time a B option was chosen.
+    CPercentage     = 0;                    % Current percent of the time a C option was chosen.
     currTrial       = 0;                    % Current trial.
     currTrialType   = '';                   % Whether the trial is AB, AC, or BC.
     inHoldingState  = true;                 % Whether or not in holding fixation state.
@@ -500,16 +509,22 @@ function risky_skews(monkeysInitial)
     % Prints current trial stats.
     function print_stats()
         % Convert percentages to strings.
-        aPercentStr   = strcat(num2str(aPercentage), '%');
-        bPercentStr   = strcat(num2str(bPercentage), '%');
-        cPercentStr   = strcat(num2str(cPercentage), '%');
-        trialCountStr = num2str(currTrial);
+        aPercentStr       = strcat(num2str(APercentage), '%');
+        bPercentStr       = strcat(num2str(BPercentage), '%');
+        cPercentStr       = strcat(num2str(CPercentage), '%');
+        AOverABPercentStr = strcat(num2str(AOverABPercent), '%');
+        AOverACPercentStr = strcat(num2str(AOverACPercent), '%');
+        BOverBCPercentStr = strcat(num2str(BOverBCPercent), '%');
+        trialCountStr     = num2str(currTrial);
+        rewardGivenStr    = num2str(rewardGiven);
         
         home;
         disp('             ');
         disp('****************************************');
         disp('             ');
         fprintf('Total trials: % s', trialCountStr);
+        disp('             ');
+        fprintf('Reward duration: % s', rewardGivenStr);
         disp('             ');
         disp('             ');
         disp('----------------------------------------');
@@ -519,6 +534,15 @@ function risky_skews(monkeysInitial)
         fprintf('Chose B: % s', bPercentStr);
         disp('             ');
         fprintf('Chose C: % s', cPercentStr);
+        disp('             ');
+        disp('             ');
+        disp('----------------------------------------');
+        disp('             ');
+        fprintf('Chose A in AB: % s', AOverABPercentStr);
+        disp('             ');
+        fprintf('Chose A in AC: % s', AOverACPercentStr);
+        disp('             ');
+        fprintf('Chose B in BC: % s', BOverBCPercentStr);
         disp('             ');
         disp('             ');
         disp('****************************************');
@@ -634,16 +658,52 @@ function risky_skews(monkeysInitial)
                         rewardGiven = rewardOnLeft;
                         
                         if strcmp(optionChosen, 'A')
-                            aCount = aCount + 1;
+                            ACount = ACount + 1;
                         elseif strcmp(optionChosen, 'B')
-                            bCount = bCount + 1;
+                            BCount = BCount + 1;
                         elseif strcmp(optionChosen, 'C')
-                            cCount = cCount + 1;
+                            CCount = CCount + 1;
                         end
                         
-                        aPercentage = round((aCount / currTrial) * 100);
-                        bPercentage = round((bCount / currTrial) * 100);
-                        cPercentage = round((cCount / currTrial) * 100);
+                        if strcmp(currTrialType, 'AB')
+                            ABCount = ABCount + 1;
+                            
+                            if strcmp(optionChosen, 'A')
+                                AWithAB = AWithAB + 1;
+                            end
+                        elseif strcmp(currTrialType, 'AC')
+                            ACCount = ACCount + 1;
+                            
+                            if strcmp(optionChosen, 'A')
+                                AWithAC = AWithAC + 1;
+                            end
+                        elseif strcmp(currTrialType, 'BC')
+                            BCCount = BCCount + 1;
+                            
+                            if strcmp(optionChosen, 'B')
+                                BWithBC = BWithBC + 1;
+                            end
+                        end
+                        
+                        APercentage = round((ACount / currTrial) * 100);
+                        BPercentage = round((BCount / currTrial) * 100);
+                        CPercentage = round((CCount / currTrial) * 100);
+                        
+                        if ABCount == 0
+                            AOverABPercent = 0;
+                        else
+                            AOverABPercent = round((AWithAB / ABCount) * 100);
+                        end
+                        if ACCount == 0
+                            AOverACPercent = 0;
+                        else
+                            AOverACPercent = round((AWithAC / ACCount) * 100);
+                        end
+                        if BCCount == 0
+                            BOverBCPercent = 0;
+                        else
+                            BOverBCPercent = round((BWithBC / BCCount) * 100);
+                        end
                         
                         save_trial_data;
                     elseif strcmp(area, 'right')
@@ -664,16 +724,52 @@ function risky_skews(monkeysInitial)
                         rewardGiven = rewardOnRight;
                         
                         if strcmp(optionChosen, 'A')
-                            aCount = aCount + 1;
+                            ACount = ACount + 1;
                         elseif strcmp(optionChosen, 'B')
-                            bCount = bCount + 1;
+                            BCount = BCount + 1;
                         elseif strcmp(optionChosen, 'C')
-                            cCount = cCount + 1;
+                            CCount = CCount + 1;
                         end
                         
-                        aPercentage = round((aCount / currTrial) * 100);
-                        bPercentage = round((bCount / currTrial) * 100);
-                        cPercentage = round((cCount / currTrial) * 100);
+                        if strcmp(currTrialType, 'AB')
+                            ABCount = ABCount + 1;
+                            
+                            if strcmp(optionChosen, 'A')
+                                AWithAB = AWithAB + 1;
+                            end
+                        elseif strcmp(currTrialType, 'AC')
+                            ACCount = ACCount + 1;
+                            
+                            if strcmp(optionChosen, 'A')
+                                AWithAC = AWithAC + 1;
+                            end
+                        elseif strcmp(currTrialType, 'BC')
+                            BCCount = BCCount + 1;
+                            
+                            if strcmp(optionChosen, 'B')
+                                BWithBC = BWithBC + 1;
+                            end
+                        end
+                        
+                        APercentage = round((ACount / currTrial) * 100);
+                        BPercentage = round((BCount / currTrial) * 100);
+                        CPercentage = round((CCount / currTrial) * 100);
+                        
+                        if ABCount == 0
+                            AOverABPercent = 0;
+                        else
+                            AOverABPercent = round((AWithAB / ABCount) * 100);
+                        end
+                        if ACCount == 0
+                            AOverACPercent = 0;
+                        else
+                            AOverACPercent = round((AWithAC / ACCount) * 100);
+                        end
+                        if BCCount == 0
+                            BOverBCPercent = 0;
+                        else
+                            BOverBCPercent = round((BWithBC / BCCount) * 100);
+                        end
                         
                         save_trial_data;
                     end
@@ -685,28 +781,31 @@ function risky_skews(monkeysInitial)
             run_single_trial;
         end
     end
-
+    
     % Saves trial data to a .mat file.
     function save_trial_data()
         % Save variables to a .mat file.
-        data(currTrial).trial = currTrial;           % The trial number for this trial.
-        data(currTrial).trialType = currTrialType;   % The type of trial: AB, AC, or CB.
-        data(currTrial).aCount = aCount;             % The number of times an A option was chosen.
-        data(currTrial).bCount = bCount;             % The number of times a B option was chosen.
-        data(currTrial).cCount = cCount;             % The number of times a C option was chosen.
-        data(currTrial).aPercentage = aPercentage;   % The percent that option A has been chosen.
-        data(currTrial).bPercentage = bPercentage;   % The percent that option B has been chosen.
-        data(currTrial).cPercentage = cPercentage;   % The percent that option C has been chosen.
-        data(currTrial).leftStim = stimOnLeft;       % Option on the left side.
-        data(currTrial).rightStim = stimOnRight;     % Option on the right side.
-        data(currTrial).choice = optionChosen;       % Option that the monkey chose.
-        data(currTrial).reward = rewardGiven;        % The reward duration the monkey was given.
-        data(currTrial).chooseTime = chooseFixTime;  % Time monkey most look at the option to select it.
-        data(currTrial).successTime = successTime;   % Time monkey is shown feedback after selecting option.
-        data(currTrial).holdTime = holdFixTime;      % Time monkey most look at the option to select it.
-        data(currTrial).ITI = ITI;                   % Intertrial interval.
-        data(currTrial).minFixTime = minFixTime;     % Time monkey must fixate to start trial.
-        data(currTrial).trackedEye = trackedEye;     % The eye being tracked.
+        data(currTrial).trial = currTrial;               % The trial number for this trial.
+        data(currTrial).trialType = currTrialType;       % The type of trial: AB, AC, or CB.
+        data(currTrial).ACount = ACount;                 % The number of times an A option was chosen.
+        data(currTrial).BCount = BCount;                 % The number of times a B option was chosen.
+        data(currTrial).CCount = CCount;                 % The number of times a C option was chosen.
+        data(currTrial).APercentage = APercentage;       % The percent that option A has been chosen.
+        data(currTrial).BPercentage = BPercentage;       % The percent that option B has been chosen.
+        data(currTrial).CPercentage = CPercentage;       % The percent that option C has been chosen.
+        data(currTrial).AOverABPercent = AOverABPercent; % Percent of times A is chosen over B in AB trials.
+        data(currTrial).AOverACPercent = AOverACPercent; % Percent of times A is chosen over C in AC trials.
+        data(currTrial).BOverBCPercent = BOverBCPercent; % Percent of times B is chosen over C in BC trials.
+        data(currTrial).leftStim = stimOnLeft;           % Option on the left side.
+        data(currTrial).rightStim = stimOnRight;         % Option on the right side.
+        data(currTrial).choice = optionChosen;           % Option that the monkey chose.
+        data(currTrial).reward = rewardGiven;            % The reward duration the monkey was given.
+        data(currTrial).chooseTime = chooseFixTime;      % Time monkey most look at the option to select it.
+        data(currTrial).successTime = successTime;       % Time monkey is shown feedback after selecting option.
+        data(currTrial).holdTime = holdFixTime;          % Time monkey most look at the option to select it.
+        data(currTrial).ITI = ITI;                       % Intertrial interval.
+        data(currTrial).minFixTime = minFixTime;         % Time monkey must fixate to start trial.
+        data(currTrial).trackedEye = trackedEye;         % The eye being tracked.
         
         eval(saveCommand);
     end
