@@ -115,7 +115,7 @@ function risky_skews(monkeysInitial)
     % Times.
     chooseFixTime   = 0.4;                  % Time needed to look at option to select it.
     successTime     = 0.2;                  % Time that successful selection feedback is given.
-    holdFixTime     = 0.1;                  % Time fixation must be held with options present.
+    holdFixTime     = 2; % 0.1;                  % Time fixation must be held with options present.
     ITI             = 1;                    % Intertrial interval.
     minFixTime      = 0.1;                  % Minimum time monkey must fixate to start trial.
     timeToFix       = intmax;               % Amount of time monkey is given to fixate.
@@ -136,6 +136,7 @@ function risky_skews(monkeysInitial)
     APercentage     = 0;                    % Current percent of the time an A option was chosen.
     BPercentage     = 0;                    % Current percent of the time a B option was chosen.
     CPercentage     = 0;                    % Current percent of the time a C option was chosen.
+    breakHoldCount  = 0;                    % Number of times hold fixation was broken.
     currTrial       = 0;                    % Current trial.
     currTrialType   = '';                   % Whether the trial is AB, AC, or BC.
     inHoldingState  = true;                 % Whether or not in holding fixation state.
@@ -396,11 +397,11 @@ function risky_skews(monkeysInitial)
     function generate_stimuli()
         % Determine what trial type it will be.
         possibleTrials = [{'AB'}, {'AC'}, {'BC'}];
-        randIndex = rand_int(2);
+        randIndex = rand_int(3);
         currTrialType = char(possibleTrials(randIndex));
         
         % Determine positioning.
-        randIndex = rand_int(1);
+        randIndex = rand_int(2);
         stimOnLeft = currTrialType(randIndex);
         tempCurrType = currTrialType;
         tempCurrType(randIndex) = [];
@@ -412,10 +413,10 @@ function risky_skews(monkeysInitial)
         
         % Determine reward amount for the left option.
         if strcmp(stimOnLeft, 'A')
-            randIndex = rand_int(distALen - 1);
+            randIndex = rand_int(distALen);
             rewardOnLeft = distA(randIndex);
         elseif strcmp(stimOnLeft, 'B')
-            randIndex = rand_int(distALen - 1);
+            randIndex = rand_int(distALen);
             rewardOnLeft = distA(randIndex);
         elseif strcmp(stimOnLeft, 'C')
             rewardOnLeft = r110;
@@ -423,10 +424,10 @@ function risky_skews(monkeysInitial)
         
         % Determine the reward amount for the right option.
         if strcmp(stimOnRight, 'A')
-            randIndex = rand_int(distBLen - 1);
+            randIndex = rand_int(distBLen);
             rewardOnRight = distB(randIndex);
         elseif strcmp(stimOnRight, 'B')
-            randIndex = rand_int(distBLen - 1);
+            randIndex = rand_int(distBLen);
             rewardOnRight = distB(randIndex);
         elseif strcmp(stimOnRight, 'C')
             rewardOnRight = r110;
@@ -580,7 +581,7 @@ function risky_skews(monkeysInitial)
 
     % Returns a random int between 1 (inclusive) and integer + 1 (inclusive).
     function randInt = rand_int(integer)
-        randInt = round(rand(1) * integer + 1);
+        randInt = floor(rand(1) * integer + 1);
     end
     
     % Rewards monkey using the juicer with the passed duration.
@@ -610,6 +611,9 @@ function risky_skews(monkeysInitial)
             generate_stimuli;
         end
         
+        % Make sure the hold fixation dot will be on.
+        inHoldingState = true;
+        
         draw_fixation_point(colorYellow);
         
         % Check for fixation.
@@ -625,6 +629,7 @@ function risky_skews(monkeysInitial)
             
             if fixationBreak
                 % Start trial over because fixation wasn't held.
+                breakHoldCount = breakHoldCount + 1;
                 repeatTrial = true;
                 run_single_trial;
                 return;
@@ -799,6 +804,7 @@ function risky_skews(monkeysInitial)
         data(currTrial).leftStim = stimOnLeft;           % Option on the left side.
         data(currTrial).rightStim = stimOnRight;         % Option on the right side.
         data(currTrial).choice = optionChosen;           % Option that the monkey chose.
+        data(currTrial).breakHoldCount = breakHoldCount; % The number of times the hold fixation was broken.
         data(currTrial).reward = rewardGiven;            % The reward duration the monkey was given.
         data(currTrial).chooseTime = chooseFixTime;      % Time monkey most look at the option to select it.
         data(currTrial).successTime = successTime;       % Time monkey is shown feedback after selecting option.
